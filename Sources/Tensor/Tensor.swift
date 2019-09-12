@@ -56,8 +56,11 @@ class Tensor<DTYPE: Numeric & Comparable>: CustomStringConvertible {
 		self.strides = computeStrides(forSizes: sizes)
 		self.count = sizes.reduce(1, *)
 		self.storage = UnsafeMutablePointer<DTYPE>.allocate(capacity: self.count)
+		
+		// Temp fill memory with values for testing. This only works
+		// for Int type Tensor.
 		for i in 0..<self.count {
-			self.storage[i] = i as! DTYPE
+			self.storage[i] = Float(i) as! DTYPE
 		}
 	}
 	
@@ -90,10 +93,28 @@ class Tensor<DTYPE: Numeric & Comparable>: CustomStringConvertible {
 		return 0
 	}
 	
+	/// Subscript method that will access the Tensor's
+	/// storage without the use of ranges.
+	///
+	/// - Parameter indices: A variadic list of Ints specifying
+	///             the indices to access.
 	subscript(_ indices: Int...) -> DTYPE {
 		var offset: Int = 0
+		if indices.count > self.sizes.count {
+			let message: String = ("Expected no more than \(self.sizes.count) "
+				+ "indices, but got \(indices.count) instead.")
+			print(message)
+			fatalError(message)
+		}
 		for (i, index) in indices.enumerated() {
-			offset += index * self.strides[i]
+			if index < self.sizes[i] {
+				offset += index * self.strides[i]
+			} else {
+				let message: String = ("Index \(index) is too large for Tensor "
+					+ "shape \(self.sizes[i]) at position \(i + 1).")
+				print(message)
+				fatalError(message)
+			}
 		}
 		return self.storage[offset]
 	}
